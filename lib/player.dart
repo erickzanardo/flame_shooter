@@ -1,8 +1,14 @@
 import 'dart:math';
 
+import './game.dart';
+
 class Player {
   static const MOVE_SPEED = 6;
   static const ROTATE_SPEED = 60 * pi / 180;
+
+  FlameShooterGame gameRef;
+
+  Player(this.gameRef);
 
   double x = 0;
   double y = 0;
@@ -23,7 +29,17 @@ class Player {
     final newY = y + sin(rotation) * moveStep;
 
     // Set new position
-    x = newX;
-    y = newY;
+    if (!isBlocking(newX, newY)) {
+      x = newX;
+      y = newY;
+    }
+  }
+
+  bool isBlocking(double x, double y) {
+    // check boundaries of the level
+    if (y < 0 || y >= gameRef.mapHeight || x < 0 || x >= gameRef.mapWidth) {
+      return true;
+    }
+    return (gameRef.map[y.floor()][x.floor()] != 0);
   }
 }

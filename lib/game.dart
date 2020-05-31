@@ -15,7 +15,7 @@ class FlameShooterGame extends Game with KeyboardEvents {
   double mapHeight;
   double miniMapScale = 8;
 
-  final Player player = Player();
+  Player player;
 
   final linePaint = Paint()
         ..color = Color(0xFFFF0000)
@@ -47,6 +47,7 @@ class FlameShooterGame extends Game with KeyboardEvents {
       mapHeight = map.length.toDouble();
       mapWidth = map[0].length.toDouble();
 
+      player = Player(this);
       player.x = 1;
       player.y = 1;
   }
@@ -110,12 +111,12 @@ class FlameShooterGame extends Game with KeyboardEvents {
         player.direction = 1;
       }
     } else {
+      // Is key up
       if (event.logicalKey.keyLabel == 'w' || event.logicalKey.keyLabel == 's') {
         player.speed = 0;
       } if (event.logicalKey.keyLabel == 'a' || event.logicalKey.keyLabel == 'd') {
         player.direction = 0;
       }
-      // Is key up
     }
   }
 }
