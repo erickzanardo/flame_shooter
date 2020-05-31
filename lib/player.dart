@@ -3,6 +3,8 @@ import 'dart:math';
 import './game.dart';
 
 class Player {
+  static const TWO_PI = pi * 2;
+
   static const MOVE_SPEED = 6;
   static const ROTATE_SPEED = 60 * pi / 180;
 
@@ -23,6 +25,10 @@ class Player {
 
     // Add rotation if player is rotating (player.dir != 0)
     rotation += direction * ROTATE_SPEED * dt;
+
+    // make sure the angle is between 0 and 360 degrees
+    while (rotation < 0) rotation += TWO_PI;
+    while (rotation >= TWO_PI) rotation -= TWO_PI;
 
     // Calculate new player position with simple trigonometry
     final newX = x + cos(rotation) * moveStep;
