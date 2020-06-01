@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'dart:math';
 
 import './player.dart';
+import './world_renderer.dart';
 
 class FlameShooterGame extends Game with KeyboardEvents {
   Size screenSize;
@@ -16,6 +17,8 @@ class FlameShooterGame extends Game with KeyboardEvents {
   double mapWidth;
   double mapHeight;
   double miniMapScale = 8;
+
+  WorldRenderer worldRenderer;
 
   Player player;
 
@@ -28,7 +31,8 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
 
   */
   static const SCREEN_WIDTH = 320;
-  static const STRIP_WIDTH = 4;
+  static const SCREEN_HEIGHT = 200;
+  static const STRIP_WIDTH = 2;
 
   static const FOV = 60 * pi / 180;
   static const FOV_HALF = FOV / 2;
@@ -87,6 +91,9 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
     player = Player(this);
     player.x = 16;
     player.y = 10;
+
+    worldRenderer = WorldRenderer(this)
+        ..init();
   }
 
   @override
@@ -98,10 +105,17 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
   @override
   void render(Canvas canvas) {
     drawMiniMap(canvas);
+    canvas.save();
+    canvas.translate(200, 200);
+    worldRenderer.render(canvas);
+    canvas.restore();
   }
 
   void castRays() {
     castedRays.clear();
+    //worldRenderer.reset();
+
+    int stripIdx = 0;
     for (int i = 0; i < numRays; i++) {
       // Where on the screen does ray go through?
       final rayScreenPos = (-numRays / 2 + i) * STRIP_WIDTH;
@@ -117,11 +131,12 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
           // Add the players viewing direction
           // to get the angle in world space
           player.rotation + rayAngle,
+          stripIdx++,
       );
     }
   }
 
-  void castSingleRay(_rayAngle) {
+  void castSingleRay(double _rayAngle, int stripIdx) {
     // Make sure the angle is between 0 and 360 degrees
     double rayAngle = _rayAngle % TWO_PI;
     if (rayAngle > 0) _rayAngle += TWO_PI;
@@ -219,6 +234,11 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
 
     if (dist != 0) {
       castedRays.add(Position(xHit, yHit));
+      worldRenderer.updateStrip(
+          stripIdx: stripIdx,
+          dist: dist,
+          rayAngle: rayAngle,
+      );
     }
   }
 
