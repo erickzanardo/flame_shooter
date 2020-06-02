@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flame/game.dart';
 import 'package:flame/position.dart';
 import 'package:flame/palette.dart';
 import 'package:flame/keyboard.dart';
+import 'package:flame/gestures.dart';
+import 'package:flame/spritesheet.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'dart:math';
@@ -9,7 +12,7 @@ import 'dart:math';
 import './player.dart';
 import './world_renderer.dart';
 
-class FlameShooterGame extends Game with KeyboardEvents {
+class FlameShooterGame extends Game with KeyboardEvents, MultiTouchTapDetector {
   Size screenSize;
 
   List<List<int>> map;
@@ -21,6 +24,9 @@ class FlameShooterGame extends Game with KeyboardEvents {
   WorldRenderer worldRenderer;
 
   Player player;
+
+  //Image texture;
+  SpriteSheet textures;
 
   /*
      I still haven't figured it out, but SCREEN_WIDTH and STRIP_WIDTH have a direct relation.
@@ -38,6 +44,8 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
   static const FOV_HALF = FOV / 2;
   static const TWO_PI = pi * 2;
 
+  static const NUM_TEXTURES = 4;
+
   int numRays;
   double viewDist;
 
@@ -54,7 +62,9 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.5;
 
-  FlameShooterGame(this.screenSize) {
+  FlameShooterGame(this.screenSize, this.textures) {
+    miniMapScale = (screenSize.height * 0.01).ceilToDouble();
+
     numRays = (SCREEN_WIDTH / STRIP_WIDTH).ceil();
     viewDist = (SCREEN_WIDTH / 2) / tan((FOV / 2));
 
@@ -104,16 +114,15 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
 
   @override
   void render(Canvas canvas) {
-    drawMiniMap(canvas);
     canvas.save();
-    canvas.translate(200, 200);
     worldRenderer.render(canvas);
     canvas.restore();
+    drawMiniMap(canvas);
   }
 
   void castRays() {
     castedRays.clear();
-    //worldRenderer.reset();
+    worldRenderer.reset();
 
     int stripIdx = 0;
     for (int i = 0; i < numRays; i++) {
@@ -177,6 +186,9 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
     // step we just made, multiplied by the slope
     double y = player.y + (x - player.x) * slope;
 
+    int wallType;
+    bool wallIsHorizontal = false;
+
     while (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
       final wallX = (x + (right ? 0 : -1)).floor();
       final wallY = y.floor();
@@ -187,6 +199,7 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
         final distY = y - player.y;
         // The distance from the player to this point, squared
         dist = distX * distX + distY * distY;
+        wallType = map[wallY][wallX]; // we'll remember the type of wall we hit for later
 
         textureX = y % 1;	// where exactly are we on the wall? textureX is the x coordinate on the texture that we'll use when texturing the wall.
         if (!right) textureX = 1 - textureX; // if we're looking to the left side of the map, the texture should be reversed
@@ -195,6 +208,9 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
         // use these to draw the rays on minimap
         xHit = x;
         yHit = y;
+
+        wallIsHorizontal = true;
+
         break;
       }
       x += dX;
@@ -223,6 +239,8 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
           dist = blockDist;
           xHit = x;
           yHit = y;
+
+          wallType = map[wallY][wallX];
           textureX = x % 1;
           if (up) textureX = 1 - textureX;
         }
@@ -238,6 +256,8 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
           stripIdx: stripIdx,
           dist: dist,
           rayAngle: rayAngle,
+          wallType: wallType,
+          textureX: textureX,
       );
     }
   }
@@ -307,6 +327,42 @@ Consider a 320x240 game screen rendering a 120° Field of Vision (FOV). If we ca
       } if (event.logicalKey.keyLabel == 'a' || event.logicalKey.keyLabel == 'd') {
         player.direction = 0;
       }
+    }
+  }
+
+  @override
+  void onTapDown(_, details) {
+    if (kIsWeb) return;
+
+    final middleX = screenSize.width / 2;
+    final middleY = screenSize.height / 2;
+
+    if (details.localPosition.dx < middleX) {
+      if (details.localPosition.dy < middleY) {
+        player.speed = 1;
+      } else {
+        player.speed = -1;
+      }
+    } else {
+      final midleOfTheHalf = middleX + middleX / 2;
+      if (details.localPosition.dx < midleOfTheHalf) {
+        player.direction = -1;
+      } else {
+        player.direction = 1;
+      }
+    }
+  }
+
+  @override
+  void onTapUp(_, details) {
+    if (kIsWeb) return;
+
+    final middleX = screenSize.width / 2;
+
+    if (details.localPosition.dx < middleX) {
+      player.speed = 0;
+    } else {
+      player.direction = 0;
     }
   }
 }
